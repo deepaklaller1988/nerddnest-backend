@@ -1,0 +1,31 @@
+# React
+node_modules/
+build/
+dist/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Log files
+*.log
+
+# Sensitive data
+.env*
+.env
+.env.local
+.env.*.local
+
+# Compiled files
+*.class
+*.o
+*.so
+
+package-lock.json
