@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
+import dotenv from "dotenv";
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}` });
 
 const options = {
     username: process.env.DB_USER,
@@ -10,12 +10,4 @@ const options = {
     dialect: 'postgres'
 };
 
-export const development = options;
-export const local = options;
-export const production = options;
-
-export default {
-    local,
-    development,
-    production,
-};
+module.exports = options

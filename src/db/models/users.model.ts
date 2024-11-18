@@ -1,9 +1,7 @@
-'use strict';
-import { DataTypes, Model } from 'sequelize';
-import sequelize from '../dbConnect';
-import { UserAttributes } from 'types/userTypes';
+import { DataTypes } from 'sequelize';
+import db from '../dbConnect';
 
-const Users = sequelize.define<Model<UserAttributes>>('users', {
+const Users = db.define('users', {
   id: {
     allowNull: false,
     autoIncrement: true,
@@ -58,9 +56,8 @@ const Users = sequelize.define<Model<UserAttributes>>('users', {
     type: DataTypes.STRING(500),
     allowNull: true,
   },
-}, {
-  modelName: 'users',
-  timestamps: true,
 });
+
+Users.sync()
 
 export default Users;
