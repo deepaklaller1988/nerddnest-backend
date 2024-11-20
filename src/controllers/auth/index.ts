@@ -9,6 +9,7 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
 
 export const login = async (req: Request, res: Response) => {
+    console.log("object")
     try {
         let { email, password } = await req.body;
         if (!email || !password) {

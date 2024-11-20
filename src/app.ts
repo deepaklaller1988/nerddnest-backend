@@ -41,9 +41,9 @@ app.use(setInterface);
 
 app.use("/auth", authRouter);
 
-app.use((req, res) => {
-    res.status(404).json({ message: "Route not found" });
-});
+// app.use((req, res) => {
+//     res.status(404).json({ message: "Route not found" });
+// });
 
 app.listen(PORT, () => {
     connectToDb();
