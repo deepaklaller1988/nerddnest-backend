@@ -41,10 +41,6 @@ app.use(setInterface);
 
 app.use("/auth", authRouter);
 
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "API is working" });
-});
-
 app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
