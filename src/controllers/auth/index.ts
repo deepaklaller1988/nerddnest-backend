@@ -133,3 +133,15 @@ export const register = async (req: Request, res: Response) => {
       }
 }
 
+
+export const users = async (req: Request, res: Response) => {
+    try {
+       
+        let checkUser = await Users.findAll();
+
+        return res.sendSuccess(res, { checkUser }, 200);
+    } catch (error: any) {
+        console.log(error)
+        res.sendError(res, error?.message);
+      }
+}
