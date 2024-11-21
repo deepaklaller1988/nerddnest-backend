@@ -1,9 +1,12 @@
 import { encryptPassword, verifyPassword } from '../../utils/hash';
 import { Request, Response } from 'express';
 import { v4 as uuid_v4 } from 'uuid';
+import CryptoJS from "crypto-js";
 // import { checkUserLoginAttributes } from '../types/userTypes';
 import { generateToken } from '../../utils/handleToken';
 import Users from '../../db/models/users.model';
+import UserToken from '../../db/models/user-token.model';
+import { sendForgotEmail } from '../../utils/send-mailer';
 
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
@@ -134,14 +137,72 @@ export const register = async (req: Request, res: Response) => {
 }
 
 
-export const users = async (req: Request, res: Response) => {
+export const getUsers = async (req: Request, res: Response) => {
     try {
        
-        let checkUser = await Users.findAll();
+        let users = await Users.findAll();
 
-        return res.sendSuccess(res, { checkUser }, 200);
+        return res.sendSuccess(res, users, 200);
     } catch (error: any) {
         console.log(error)
         res.sendError(res, error?.message);
       }
 }
+
+
+
+const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const user = await Users.findOne({ where: { email: req.body.email } });
+        if (!user) {
+            return res.sendError(res, "ERR_AUTH_WRONG_USERNAME_OR_PASSWORD");
+        }
+
+        let resetToken = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
+        let token = await UserToken.findOne({ where: { user_id: user.id } })
+        if (!token) {
+            await UserToken.create({ user_id: user.id, token: resetToken, createdAt: Date.now() });
+        } else {
+            await UserToken.update({ token: resetToken }, {
+                where: {
+                    id: token.id
+                }
+            });
+        }
+        const link = `${process.env.ADMIN_URL}/auth/reset-password?token=${resetToken}`;
+
+        sendForgotEmail(link, user.email);
+        return res.sendSuccess(res, { success: true, message: 'Forgot password email has been send' });
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
+    }
+};
+
+const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const userToken = await UserToken.findOne({ where: { token: req.body.token } });
+        if (!userToken) {
+            return res.sendError(res, "ERR_AUTH_WRONG_TOKEN");
+        }
+        await UserToken.destroy({ where: { id: userToken.id } });
+        let securedPassword: any = await encryptPassword(req.body.password);
+        if (!securedPassword.success) {
+            return res.sendError(res, "ERR_PASSWORD_ENCRYPTION_FAILED");
+        }
+
+        await Users.update({
+            password: securedPassword.password,
+        }, {
+            where: {
+                id: userToken.user_id
+            }
+        });
+        return res.sendSuccess(res, { status: true, message: 'Password changed successfully' });
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
+    }
+};
+
+export { forgotPassword, resetPassword }
