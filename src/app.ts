@@ -6,6 +6,8 @@ console.log(process.env.NODE_ENV);
 
 import express from 'express';
 import cors from "cors";
+import cookieParser from "cookie-parser";
+
 import sequelize from "./db/dbConnect";
 import setInterface from "./middlewares/interface";
 import logging from "./middlewares/logging";
@@ -38,6 +40,8 @@ var corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use(cookieParser());
 app.use(setInterface);
 app.use(logging);
 

@@ -2,10 +2,25 @@ import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 import logger from "./logger";
 
+// const transporter = nodemailer.createTransport({
+//     host: process.env.EMAIL_HOST,
+//     port: 465, // Use 587 for local gmail email ids
+//     secure: true, // Use false for local gmail email ids
+//     requireTLS: true,
+//     // tls: {
+//     //     rejectUnauthorized: false
+//     //   },
+//     auth: {
+//         user: process.env.EMAIL_USER,
+//         pass: process.env.EMAIL_PASS,
+//     },
+//     logger: true
+// });
+
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: 465, // Use 587 for local gmail email ids
-    secure: true, // Use false for local gmail email ids
+    port: 587, // Use 587 for local gmail email ids
+    secure: false, // Use false for local gmail email ids
     requireTLS: true,
     // tls: {
     //     rejectUnauthorized: false
@@ -35,6 +50,31 @@ const sendForgotEmail = (link: any, email: string) => {
             console.log('sent');
             logger.info(`MAIL ${email} SUCCEED - SUBJECT: Reset Password`);
          }
+    });
+}
+
+const sendActivationEmail = (link: any, email: string) => {
+    return new Promise((resolve, reject) => {
+        const message = {
+            from: process.env.SENDER_EMAIL_ADDRESS,
+            to: email,
+            subject: 'Verify Email',
+            text: `Verify your email to activate your account, please click on the link below to activate.\n\n ${link}`
+        };
+    
+        //send email
+        transporter.sendMail(message, function (err, info) {
+            if (err) { 
+                console.log(err);
+                logger.error(`MAIL ${email} FAILED - SUBJECT: Verify Email ERROR: ${err}`);
+                resolve(false);
+            }
+            else { 
+                console.log('sent'); 
+                logger.info(`MAIL ${email} SUCCEED - SUBJECT: Verify Email`);
+                resolve(true);
+            }
+        });
     });
 }
 
@@ -92,4 +132,4 @@ const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: a
 });
 }
 
-export { sendForgotEmail, sendEmail, sendOTP }
+export { sendForgotEmail, sendEmail, sendOTP, sendActivationEmail }

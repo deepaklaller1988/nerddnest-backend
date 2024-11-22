@@ -56,6 +56,10 @@ const Users = db.define('users', {
     type: DataTypes.STRING(500),
     allowNull: true,
   },
+  is_acc_activated: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
 });
 
 Users.sync()

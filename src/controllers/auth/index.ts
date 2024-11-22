@@ -3,10 +3,11 @@ import { Request, Response } from 'express';
 import { v4 as uuid_v4 } from 'uuid';
 import CryptoJS from "crypto-js";
 // import { checkUserLoginAttributes } from '../types/userTypes';
-import { generateToken } from '../../utils/handleToken';
+import { generateActivationToken, generateToken, getAccessByRefreshToken, verifyActivationToken, verifyToken } from '../../utils/handleToken';
 import Users from '../../db/models/users.model';
 import UserToken from '../../db/models/user-token.model';
-import { sendForgotEmail } from '../../utils/send-mailer';
+import { sendActivationEmail, sendForgotEmail } from '../../utils/send-mailer';
+import sequelize from '../../db/dbConnect';
 
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
@@ -38,12 +39,17 @@ export const login = async (req: Request, res: Response) => {
         if (!checkUser) {
             return res.sendError(res, "ERR_USER_NOT_FOUND");
         }
+
+        if (!checkUser.is_acc_activated) {
+            return res.sendError(res, "ERR_ACCOUNT_NOT_VERIFIED");
+        }
+
         let isPasswordValid = await verifyPassword(password, checkUser?.password);
         if (!isPasswordValid.verified) {
             return res.sendError(res, "ERR_WRONG_PASSWORD");
         }
 
-        let refreshToken = await generateToken({id:checkUser?.id, userId:checkUser?.userId}, "refreshToken");
+        let refreshToken = await generateToken({id:checkUser?.id, userId:checkUser?.userId}, "refresh");
         let accessToken = await generateToken({id:checkUser?.id, userId:checkUser?.userId}, "access");
 
         if (!refreshToken.success) {
@@ -57,8 +63,9 @@ export const login = async (req: Request, res: Response) => {
         checkUser.refreshToken = refreshToken.token;
         await checkUser.save();
 
-        const cookieMaxAge = process.env.COOKIE_MAX_AGE ? parseInt(process.env.COOKIE_MAX_AGE) : 60 * 60 * 1000;
-        res.cookie('accessToken', accessToken.token, {
+        // const cookieMaxAge = process.env.COOKIE_MAX_AGE ? parseInt(process.env.COOKIE_MAX_AGE) : 60 * 60 * 1000;
+        const cookieMaxAge = 7 * 24 * 60 * 60 * 1000; //7 days
+        res.cookie('RID', refreshToken.token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: cookieMaxAge,
@@ -75,16 +82,19 @@ export const login = async (req: Request, res: Response) => {
             handle: checkUser?.handle,
             dob: checkUser?.dob,
             location: checkUser?.location,
+            is_acc_activated: checkUser.is_acc_activated,
             accessToken: accessToken?.token,
         }
         return res.sendSuccess(res, response);
 
     } catch (err) {
+        console.error(err)
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
 
 export const register = async (req: Request, res: Response) => {
+    const transaction = await sequelize.transaction();
     try {
         let { image, email, password, firstname, lastname, handle, dob, location } = await req.body;
         if (!email || !password || !firstname || !lastname || !handle || !dob) {
@@ -127,9 +137,106 @@ export const register = async (req: Request, res: Response) => {
             handle,
             dob,
             location
-        })
-        var { token } = await generateToken({id: user?.dataValues?.id, userId: user?.dataValues?.userId}, "refresh");
-        return res.sendSuccess(res, { token }, 200);
+        },
+        { transaction }
+        )
+
+        var { token } = await generateActivationToken({id: user?.dataValues?.id, userId: user?.dataValues?.userId});
+
+        const link = `${process.env.ADMIN_URL}/auth/registration?type=activation&token=${token}`;
+
+        let result = await sendActivationEmail(link, user?.dataValues?.email);
+
+        if (result === true) {
+            await transaction.commit();
+            return res.sendSuccess(res, { message: 'Activation email has been sent successfully' }, 200);
+          } else {
+            await transaction.rollback();
+            return res.sendError(res, 'Error while sending activation mail');
+          }
+
+    } catch (error: any) {
+        console.log(error)
+        if (transaction) await transaction.rollback();
+        return  res.sendError(res, error?.message);
+    }
+}
+
+export const activateAccount = async (req: Request, res: Response) => {
+    const { token }: any = req.query;
+    try {
+        if (!token) {
+            return res.sendError(res, "Verification Token is Missing");
+        }
+
+        const { data, error }: any = await verifyActivationToken(token);
+
+        if (error) {
+            switch (error.name) {
+              case "JsonWebTokenError":
+                return res.sendError(res, "Verification Token is Invalid");
+              case "TokenExpiredError":
+                return res.sendError(res, "Verification Token is Expired");
+              default:
+                res.sendError(res, "Verification Token is Invalid");
+            }
+          }
+
+          let user = await Users.findOne({
+            where: {
+              id: data.id
+            }
+          });
+
+          if(!user){
+            return res.sendError(res, "User not found");
+          }
+
+          if(user.is_acc_activated){
+            return res.sendError(res, "User is already activated");
+          }
+
+        let refreshToken = await generateToken({id:user?.id, userId:user?.userId}, "refresh");
+        let accessToken = await generateToken({id:user?.id, userId:user?.userId}, "access");
+
+        if (!refreshToken.success) {
+            return res.sendError(res, "ERR_TOKEN_GENERATE_FAILED");
+        }
+
+        if (!accessToken.success) {
+            return res.sendError(res, "ERR_TOKEN_GENERATE_FAILED");
+        }
+
+        user.refreshToken = refreshToken.token;
+        user.is_acc_activated =true;
+        await user.save()
+       
+        // const cookieMaxAge = process.env.COOKIE_MAX_AGE ? parseInt(process.env.COOKIE_MAX_AGE) : 60 * 60 * 1000;
+        const cookieMaxAge = 7 * 24 * 60 * 60 * 1000; //7 days
+        res.cookie('RID', refreshToken.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: cookieMaxAge,
+            sameSite: 'strict'
+        });
+
+
+        let response = {
+            id: user?.id,
+            userId: user?.userId,
+            image: user?.image,
+            email: user?.email,
+            firstName: user?.firstName,
+            lastName: user?.lastName,
+            handle: user?.handle,
+            dob: user?.dob,
+            location: user?.location,
+            is_acc_activated: true,
+            accessToken: accessToken?.token,
+        }
+
+        return res.sendSuccess(res, response);
+
     } catch (error: any) {
         console.log(error)
         res.sendError(res, error?.message);
@@ -205,4 +312,35 @@ const resetPassword = async (req: Request, res: Response) => {
     }
 };
 
-export { forgotPassword, resetPassword }
+const refreshAccess = async (req: Request, res: Response) => {
+    if(!req.cookies.RID){res.sendError(res, "ERR_AUTH_REFRESH_EXPIRED")};
+    try {
+        const { data, error }: any = await verifyToken(req.cookies.RID, "refresh");
+
+        if (error) {
+            switch (error.name) {
+            case "JsonWebTokenError":
+                return res.sendError(res, "ERR_AUTH_WRONG_REFRESH_TOKEN");
+            case "TokenExpiredError":
+                return res.sendError(res, "ERR_AUTH_REFRESH_EXPIRED");
+            default:
+                return res.sendError(res, "ERR_AUTH_WRONG_REFRESH_TOKEN");
+            }
+        }
+        
+        var tokens = await getAccessByRefreshToken(req.cookies.RID);
+        if (!tokens) {
+            return res.sendError(res, "ERR_AUTH_WRONG_REFRESH_TOKEN");
+        } else {
+            if (!tokens.success) {
+                return res.sendError(res, "ERR_TOKEN_GENERATE_FAILED");
+            }
+            return res.sendSuccess(res, { accessToken: tokens.token }, 200);
+        }
+    } catch (error) {
+        
+    }
+  };
+  
+
+export { forgotPassword, resetPassword, refreshAccess }
