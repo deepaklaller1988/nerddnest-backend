@@ -8,6 +8,7 @@ import express from 'express';
 import cors from "cors";
 import sequelize from "./db/dbConnect";
 import setInterface from "./middlewares/interface";
+import logging from "./middlewares/logging";
 import authRouter from "./router/auth";
 import moment from "moment";
 
@@ -38,6 +39,7 @@ var corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(setInterface);
+app.use(logging);
 
 app.use("/auth", authRouter);
 

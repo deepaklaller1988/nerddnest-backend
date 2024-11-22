@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
+import logger from "./logger";
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -26,8 +27,14 @@ const sendForgotEmail = (link: any, email: string) => {
 
     //send email
     transporter.sendMail(message, function (err, info) {
-        if (err) { console.log(err) }
-        else { console.log('sent'); }
+        if (err) { 
+            console.log(err)
+            logger.error(`MAIL ${email} FAILED - SUBJECT: Reset Password ERROR: ${err}`);
+         }
+        else { 
+            console.log('sent');
+            logger.info(`MAIL ${email} SUCCEED - SUBJECT: Reset Password`);
+         }
     });
 }
 
@@ -44,13 +51,15 @@ const sendOTP = (html: any, email: any, subject: any, from?:any) => {
     //send email
     transporter.sendMail(message, function (err, info) {
         if (err) { 
-            console.log(err);  
+            console.log(err);
+            logger.error(`MAIL ${email} FAILED - SUBJECT: ${subject} ERROR: ${err}`);
             resolve(false);
         }
         else { 
             console.log('sent'); 
-        resolve(true);
-    }
+            logger.info(`MAIL ${email} SUCCEED - SUBJECT: ${subject}`);
+            resolve(true);
+        }
     });
 });
 }
@@ -71,12 +80,14 @@ const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: a
     transporter.sendMail(message, function (err, info) {
         if (err) { 
             console.log(err);  
+            logger.error(`MAIL ${email} FAILED - SUBJECT: ${subject} ERROR: ${err}`);
             resolve(false);
         }
         else { 
             console.log('sent'); 
-        resolve(true);
-    }
+            logger.info(`MAIL ${email} SUCCEED - SUBJECT: ${subject}`);
+            resolve(true);
+        }
     });
 });
 }

@@ -1,5 +1,6 @@
 import { Response } from "express";
 import errors from "./http-error.conf";
+import logger from "./logger";
 
 export default {
   sendSuccess: (res: Response, data: object, statusCode: number = 200) => {
@@ -14,6 +15,7 @@ export default {
     if (!errors[error]) {
       error = error ? error : "ERR_INTERNAL_SERVER_ERROR";
     }
+    res.errorMessage = error;
     res
       .status(errors[error] ? errors[error].statusCode : 400)
       .json({ success: false, data: data, error: { code: error } });
