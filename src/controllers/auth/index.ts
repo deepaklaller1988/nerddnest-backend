@@ -40,14 +40,15 @@ export const login = async (req: Request, res: Response) => {
             return res.sendError(res, "ERR_USER_NOT_FOUND");
         }
 
-        if (!checkUser.is_acc_activated) {
-            return res.sendError(res, "ERR_ACCOUNT_NOT_VERIFIED");
-        }
-
         let isPasswordValid = await verifyPassword(password, checkUser?.password);
         if (!isPasswordValid.verified) {
             return res.sendError(res, "ERR_WRONG_PASSWORD");
         }
+
+        if (!checkUser.is_acc_activated) {
+            return res.sendError(res, "ERR_ACCOUNT_NOT_VERIFIED");
+        }
+
 
         let refreshToken = await generateToken({id:checkUser?.id, userId:checkUser?.userId}, "refresh");
         let accessToken = await generateToken({id:checkUser?.id, userId:checkUser?.userId}, "access");
@@ -161,6 +162,51 @@ export const register = async (req: Request, res: Response) => {
         return  res.sendError(res, error?.message);
     }
 }
+
+
+export const resendActivationMail = async (req: Request, res: Response) => {
+    try {
+        let { email, password} = await req.body;
+        if (!email) {
+            return res.sendError(res, "ERR_EMAIL_IS_MISSING");
+        }
+
+        let checkUser = await Users.findOne({
+            where: {
+                email
+            },
+            attributes: {
+                exclude: ['createdAt', 'updatedAt', 'refreshToken']
+            }
+        });
+
+        if (!checkUser) {
+            return res.sendError(res, "User Not Found");
+        }
+
+        if (checkUser.is_acc_activated) {
+            return res.sendError(res, "Account is already activated");
+        }
+
+
+        var { token } = await generateActivationToken({id: checkUser?.dataValues?.id, userId: checkUser?.dataValues?.userId});
+
+        const link = `${process.env.ADMIN_URL}/auth/registration?type=activation&token=${token}`;
+
+        let result = await sendActivationEmail(link, checkUser?.dataValues?.email);
+
+        if (result === true) {
+            return res.sendSuccess(res, { message: 'Activation email has been sent successfully' }, 200);
+          } else {
+            return res.sendError(res, 'Error while sending activation mail');
+          }
+
+    } catch (error: any) {
+        console.log(error)
+        return  res.sendError(res, error?.message);
+    }
+}
+
 
 export const activateAccount = async (req: Request, res: Response) => {
     const { token }: any = req.query;
