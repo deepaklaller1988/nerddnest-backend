@@ -144,7 +144,7 @@ export const register = async (req: Request, res: Response) => {
 
         var { token } = await generateActivationToken({id: user?.dataValues?.id, userId: user?.dataValues?.userId});
 
-        const link = `${process.env.ADMIN_URL}/auth/registration?type=activation&token=${token}`;
+        const link = `${process.env.ADMIN_URL}/auth/signup?type=activation&token=${token}`;
 
         let result = await sendActivationEmail(link, user?.dataValues?.email);
 
@@ -181,7 +181,7 @@ export const resendActivationMail = async (req: Request, res: Response) => {
         });
 
         if (!checkUser) {
-            return res.sendError(res, "User Not Found");
+            return res.sendError(res, "ERR_USER_NOT_FOUND");
         }
 
         if (checkUser.is_acc_activated) {
@@ -191,7 +191,7 @@ export const resendActivationMail = async (req: Request, res: Response) => {
 
         var { token } = await generateActivationToken({id: checkUser?.dataValues?.id, userId: checkUser?.dataValues?.userId});
 
-        const link = `${process.env.ADMIN_URL}/auth/registration?type=activation&token=${token}`;
+        const link = `${process.env.ADMIN_URL}/auth/signup?type=activation&token=${token}`;
 
         let result = await sendActivationEmail(link, checkUser?.dataValues?.email);
 
@@ -235,7 +235,7 @@ export const activateAccount = async (req: Request, res: Response) => {
           });
 
           if(!user){
-            return res.sendError(res, "User not found");
+            return res.sendError(res, "ERR_USER_NOT_FOUND");
           }
 
           if(user.is_acc_activated){
