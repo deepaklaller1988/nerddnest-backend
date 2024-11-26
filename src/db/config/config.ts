@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config({ path: `.env` });
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}` });
 
 const options = {
     username: process.env.DB_USER,
