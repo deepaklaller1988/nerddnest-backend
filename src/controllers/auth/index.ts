@@ -122,6 +122,14 @@ export const register = async (req: Request, res: Response) => {
             return res.sendError(res, "ERR_EMAIL_ALREADY_EXIST");
         }
 
+        let checkHandle = await Users.findOne({
+            where: { handle },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'refreshToken'] }
+        });
+        if (checkHandle) {
+            return res.sendError(res, "ERR_HANDLE_ALREADY_EXIST");
+        }
+
         const userId = await uuid_v4();
         let securedPassword: any = await encryptPassword(password);
         if (!securedPassword.success) {
@@ -303,12 +311,14 @@ export const getUsers = async (req: Request, res: Response) => {
 }
 
 
-
 const forgotPassword = async (req: Request, res: Response) => {
     try {
         const user = await Users.findOne({ where: { email: req.body.email } });
         if (!user) {
             return res.sendError(res, "ERR_AUTH_WRONG_USERNAME_OR_PASSWORD");
+        }
+        if (!user.is_acc_activated) {
+            return res.sendError(res, "ERR_ACCOUNT_NOT_VERIFIED");
         }
 
         let resetToken = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
