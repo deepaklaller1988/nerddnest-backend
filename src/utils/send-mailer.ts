@@ -2,25 +2,10 @@ import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 import logger from "./logger";
 
-// const transporter = nodemailer.createTransport({
-//     host: process.env.EMAIL_HOST,
-//     port: 465, // Use 587 for local gmail email ids
-//     secure: true, // Use false for local gmail email ids
-//     requireTLS: true,
-//     // tls: {
-//     //     rejectUnauthorized: false
-//     //   },
-//     auth: {
-//         user: process.env.EMAIL_USER,
-//         pass: process.env.EMAIL_PASS,
-//     },
-//     logger: true
-// });
-
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: 587, // Use 587 for local gmail email ids
-    secure: false, // Use false for local gmail email ids
+    port: 465, // Use 587 for local gmail email ids
+    secure: true, // Use false for local gmail email ids
     requireTLS: true,
     // tls: {
     //     rejectUnauthorized: false
@@ -31,6 +16,21 @@ const transporter = nodemailer.createTransport({
     },
     logger: true
 });
+
+// const transporter = nodemailer.createTransport({
+//     host: process.env.EMAIL_HOST,
+//     port: 587, // Use 587 for local gmail email ids
+//     secure: false, // Use false for local gmail email ids
+//     requireTLS: true,
+//     // tls: {
+//     //     rejectUnauthorized: false
+//     //   },
+//     auth: {
+//         user: process.env.EMAIL_USER,
+//         pass: process.env.EMAIL_PASS,
+//     },
+//     logger: true
+// });
 
 const sendForgotEmail = (link: any, email: string) => {
     const message = {
