@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { login, register, getUsers, forgotPassword, resetPassword, activateAccount, refreshAccess, resendActivationMail} from '../../controllers/auth';
+import { login, register, getUsers, forgotPassword, resetPassword, activateAccount, refreshAccess, resendActivationMail, logout} from '../../controllers/auth';
 
 
 const router = Router();
 
 router.post("/login", login);
 router.post("/register", register);
+router.get("/logout", logout);
 router.get("/get-users", getUsers);
 
 router.post("/resend-activation-mail", resendActivationMail);

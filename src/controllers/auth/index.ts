@@ -383,10 +383,16 @@ const refreshAccess = async (req: Request, res: Response) => {
             }
             return res.sendSuccess(res, { accessToken: tokens.token }, 200);
         }
-    } catch (error) {
-        
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message); 
     }
+  };
+
+  const logout = async (req: Request, res: Response) => {
+    res.clearCookie("RID");
+    res.sendSuccess(res, {});
   };
   
 
-export { forgotPassword, resetPassword, refreshAccess }
+export { forgotPassword, resetPassword, refreshAccess, logout }
