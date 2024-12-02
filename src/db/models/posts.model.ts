@@ -4,10 +4,10 @@ import Users from './users.model';
 
 const Posts = db.define('posts', {
   id: {
-    allowNull: false,
-    autoIncrement: true,
     type: DataTypes.INTEGER,
-    unique: true
+    autoIncrement: true,
+    allowNull: false,
+    primaryKey: true
   },
   user_id: {
     type: DataTypes.INTEGER,

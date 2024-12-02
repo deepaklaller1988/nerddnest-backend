@@ -3,14 +3,13 @@ import db from '../dbConnect';
 
 const Users = db.define('users', {
   id: {
-    allowNull: false,
-    autoIncrement: true,
     type: DataTypes.INTEGER,
-    unique: true
+    autoIncrement: true,
+    allowNull: false,
+    primaryKey: true
   },
   userId: {
     type: DataTypes.STRING,
-    primaryKey: true,
     allowNull: false
   },
   image: {

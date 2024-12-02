@@ -71,7 +71,7 @@ const getConnections = async (req: Request, res: Response) => {
 
         if (req.query.pagination === "true") {
             const { count, rows } = await Connections.findAndCountAll({
-                    where: {id: req.body.userId}, 
+                    where: {user_id: req.body.userId}, 
                     include, 
                     order: [
                         [
@@ -84,7 +84,7 @@ const getConnections = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         }else{
             const data = await Connections.findAll({
-                where: {id: req.body.userId}, 
+                where: {user_id: req.body.userId}, 
                 include, 
                 order: [
                     [

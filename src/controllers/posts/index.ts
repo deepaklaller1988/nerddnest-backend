@@ -29,7 +29,7 @@ const createPost = async (req: Request, res: Response) => {
           });
 
           await transaction.commit();
-
+          return res.sendSuccess(res, post);
     } catch (error: any) {
         console.log(error)
         if (transaction) await transaction.rollback();
