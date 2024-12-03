@@ -14,16 +14,24 @@ const s3 = new AWS.S3();
 
 const bucket = process.env.NODE_ENV === 'production' ? process.env.AWS_S3_BUCKET_PROD : process.env.AWS_S3_BUCKET_DEV;
 
+let isBucketChecked = false; // Cache to store the check result
+
 /**
  * Function to check if a bucket exists and create it if it doesn't.
  * @param {string} bucketName - The name of the bucket to check/create.
  */
 const ensureBucketExists = async (bucketName: string) => {
+  if (isBucketChecked) {
+    // Skip checking if already verified
+    return;
+  }
+
     try {
       // Check if the bucket exists
       await s3.headBucket({ Bucket: bucketName }).promise();
       console.log(`Bucket "${bucketName}" already exists.`);
       logger.info(`AWS S3 BUCKET ${bucketName} SUCCEED - already exists.`);
+      isBucketChecked = true; // Mark as checked
     } catch (error: any) {
       if (error.statusCode === 404) {
         // Bucket does not exist; create it
@@ -32,6 +40,7 @@ const ensureBucketExists = async (bucketName: string) => {
         await s3.createBucket({ Bucket: bucketName }).promise();
         console.log(`Bucket "${bucketName}" created successfully.`);
         logger.info(`AWS S3 BUCKET ${bucketName} SUCCEED - created successfully.`);
+        isBucketChecked = true; // Mark as checked
       } else {
         console.error(`Error checking bucket: ${error.message}`);
         logger.error(`AWS S3 BUCKET ${bucketName} FAILED - creation failed - ${error.message}`);
