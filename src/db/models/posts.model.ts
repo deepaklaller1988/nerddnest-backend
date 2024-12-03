@@ -1,6 +1,8 @@
 import { DataTypes } from 'sequelize';
 import db from '../dbConnect';
 import Users from './users.model';
+import Likes from './likes.model';
+import Comments from './comments.model';
 
 const Posts = db.define('posts', {
   id: {

@@ -4,7 +4,7 @@ import Posts from '../../db/models/posts.model';
 import UserCounts from '../../db/models/user-counts.model';
 import Connections from '../../db/models/connections.model';
 import { Op } from 'sequelize';
-import Users from 'db/models/users.model';
+import Users from '../../db/models/users.model';
 
 const createConnections = async (req: Request, res: Response) => {
     const transaction = await sequelize.transaction();
@@ -54,7 +54,7 @@ const getConnections = async (req: Request, res: Response) => {
             ];
         }
 
-        if (!req.body.userId) {
+        if (!req.query.userId) {
             return res.sendError(res, "User Id is Missing");
         }
 
@@ -71,7 +71,7 @@ const getConnections = async (req: Request, res: Response) => {
 
         if (req.query.pagination === "true") {
             const { count, rows } = await Connections.findAndCountAll({
-                    where: {user_id: req.body.userId}, 
+                    where: {user_id: req.query.userId}, 
                     include, 
                     order: [
                         [
@@ -84,7 +84,7 @@ const getConnections = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         }else{
             const data = await Connections.findAll({
-                where: {user_id: req.body.userId}, 
+                where: {user_id: req.query.userId}, 
                 include, 
                 order: [
                     [
