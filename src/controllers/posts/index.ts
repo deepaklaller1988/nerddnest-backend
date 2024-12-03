@@ -214,12 +214,19 @@ const deletePost = async (req: Request, res: Response) =>{
         return res.sendError(res, 'Need Post Id');
     }
     try {
-        const post = await Posts.destroy({
+        const post = await Posts.findOne({ where: { id: req.body.id } });
+        const del = await Posts.destroy({
             where: {
                 id: req.body.id
             }
         });
-        return res.sendSuccess(res, post);
+
+        await UserCounts.decrement('no_of_posts', {
+            by: 1,
+            where: { user_id: post?.dataValues?.user_id },
+          });
+
+        return res.sendSuccess(res, del);
 
     } catch (error: any) {
         console.log(error)
