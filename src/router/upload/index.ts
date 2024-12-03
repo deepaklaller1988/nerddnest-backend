@@ -1,5 +1,6 @@
 import {
     download,
+    multiUpload,
     upload,
     viewFile
 } from "../../controllers/upload";
@@ -14,6 +15,7 @@ const router = Router();
 // file Routes
 router.get('/:name', viewFile);
 router.post('/upload',uploadMiddleware.single('file'), upload);
+router.post('/multi-uploads',uploadMiddleware.array('files'), multiUpload);
 
 
 export default router;

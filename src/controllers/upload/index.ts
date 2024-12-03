@@ -42,6 +42,50 @@ const upload = async (req: any, res: any) => {
     }
 };
 
+const multiUpload = async (req: any, res: any) => {
+    try {
+        if (req.files == undefined || (req.files && req.files.length == 0)) {
+            return res.status(400).send({
+                status: false,
+                message: "Please provide a file",
+                data: null
+            });
+        }
+
+        const files = req.files;
+        let data: any = [];
+
+        for (let file of files){
+            const fileExt = path.extname(file.originalname)
+            const folderName = getFolderName(fileExt)
+            const fileUrl = await uploadFileToS3(file, folderName);
+
+            if(fileUrl){
+                data.push({
+                    success: true,
+                    message: "Uploaded the file successfully",
+                    data: fileUrl,
+                    name:file.originalname 
+                });
+            }else{
+                data.push({
+                    success: false,
+                    message: "Could not upload the file",
+                    data: null,
+                    name:file.originalname
+                });
+            }
+        }
+
+        return res.sendSuccess(res,data)
+    } catch (err) {
+        res.status(500).send({
+            success: false,
+            message: `Could not upload the file:. ${err}`,
+        });
+    }
+};
+
 
 const download = (req: any, res: any) => {
     const fileName = req.params.name;
@@ -131,4 +175,4 @@ function getFolderName(ext: any) {
     }
 }
 
-export { upload, download, viewFile }
+export { upload, multiUpload, download, viewFile }
