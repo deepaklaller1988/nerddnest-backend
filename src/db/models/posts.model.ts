@@ -42,6 +42,30 @@ const Posts = db.define('posts', {
     type: DataTypes.DOUBLE,
     defaultValue: 0,
   },
+  schedule_time: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  is_scheduled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  is_published: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  visibility: {
+    type: DataTypes.ENUM('public', 'all-members', 'connections', 'only-me', 'archived', 'groups'),
+    defaultValue: 'public',
+  },
+  is_pinned: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  is_commenting_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
 });
 
 Posts.belongsTo(Users, {

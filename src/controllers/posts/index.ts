@@ -17,21 +17,35 @@ const createPost = async (req: Request, res: Response) => {
             return res.sendError(res, "User Id is Missing");
         }
 
-        const data = {
+        const data: any = {
             user_id: req.body.userId,
             post_type: req.body.postType,
             content: req.body.content,
             media_url: req.body.mediaUrl,
-            shared_link: req.body.sharedLink  
+            shared_link: req.body.sharedLink,
+            visibility: req.body.visibility ?  req.body.visibility : 'public'
         };
+
+
+        if (req.body.scheduleTime) {
+          data.schedule_time = req.body.scheduleTime; // Parse the schedule time
+          data.is_scheduled = true;
+          data.is_published = false;
+        } else {
+          data.is_published = true; // Immediate post
+        }
+    
 
         const post = await Posts.create(data, { transaction });
 
-        await UserCounts.increment('no_of_posts', {
-            by: 1,
-            where: { user_id: req.body.userId },
-            transaction,
-          });
+          if (!data.is_scheduled) {
+            await UserCounts.increment("no_of_posts", {
+              by: 1,
+              where: { user_id: req.body.userId },
+              transaction,
+            });
+          }
+      
 
           await transaction.commit();
           return res.sendSuccess(res, post);
