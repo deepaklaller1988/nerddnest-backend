@@ -15,7 +15,7 @@ router.get("/refresh-access", refreshAccess);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-router.use(accessControl)
+// router.use(accessControl)
 
 router.get("/get-users", getUsers);
 
