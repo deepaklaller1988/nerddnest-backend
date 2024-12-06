@@ -275,4 +275,88 @@ const deletePost = async (req: Request, res: Response) =>{
     }
 }
 
-export { createPost, getPosts, getPost, deletePost}
+const pinPost = async (req: Request, res: Response) => {
+  try {
+    const { id, userId, pinned } = req.body;
+
+    const post = await Posts.findOne({ where: { id, user_id: userId } });
+
+    if (!post) {
+      return  res.sendError(res, 'Post not found for this user.');
+    }
+
+    post.is_pinned = pinned;
+    await post.save();
+
+    return res.sendSuccess(res, { message: `Post ${pinned ? "pinned" : " unpinned"} successfully.` });
+  } catch (error: any) {
+    console.log(error)
+    return  res.sendError(res, error?.message);
+}
+};
+
+const changeVisibilty = async (req: Request, res: Response) => {
+  try {
+    const { id, userId, visibility } = req.body;
+
+    const post = await Posts.findOne({ where: { id, user_id: userId } });
+
+    if (!post) {
+      return  res.sendError(res, 'Post not found for this user.');
+    }
+
+    post.visibility = visibility || post.visibility;
+    await post.save();
+
+    return res.sendSuccess(res, { message: 'Updated post successfully.' });
+  } catch (error: any) {
+    console.log(error)
+    return  res.sendError(res, error?.message);
+}
+};
+
+const toggleCommenting = async (req: Request, res: Response) => {
+  try {
+    const { id, userId, isCommentEnabled } = req.body;
+
+    const post = await Posts.findOne({ where: { id, user_id: userId } });
+
+    if (!post) {
+      return  res.sendError(res, 'Post not found for this user.');
+    }
+
+    post.is_commenting_enabled = isCommentEnabled;
+    await post.save();
+
+    return res.sendSuccess(res, { message: `Commenting has been ${post.is_commenting_enabled ? 'enabled' : 'disabled'}.` });
+  } catch (error: any) {
+    console.log(error)
+    return  res.sendError(res, error?.message);
+}
+};
+
+
+const editPost = async (req: Request, res: Response) => {
+  try {
+    const { id, userId, content, mediaUrl, sharedLink, visibility } = req.body;
+
+    const post = await Posts.findOne({ where: { id, user_id: userId } });
+
+    if (!post) {
+      return  res.sendError(res, 'Post not found for this user.');
+    }
+
+    post.content = content || post.content;
+    post.media_url = mediaUrl || post.media_url;
+    post.shared_link = sharedLink || post.shared_link;
+    post.visibility = visibility || post.visibility;
+
+    await post.save();
+    return res.sendSuccess(res, post);
+  } catch (error: any) {
+    console.log(error)
+    return  res.sendError(res, error?.message);
+}
+};
+
+export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty}
