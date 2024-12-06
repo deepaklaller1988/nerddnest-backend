@@ -138,7 +138,7 @@ const getPosts = async (req: Request, res: Response) => {
                 attributes: ['id', 'firstname','lastname','handle', 'image'], // Post creator info
               }
             ],
-            order: [['createdAt', 'DESC']], // Newest posts first
+            order: [['is_pinned', 'DESC'],['createdAt', 'DESC']], // Newest posts first
             offset,
             limit: Number(limit),
           });
