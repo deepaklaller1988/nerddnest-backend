@@ -4,8 +4,9 @@
   "main": "/src/app.ts",
   "scripts": {
     "watch": "tsc --watch",
+    "docker": "docker run --name redis -p 6379:6379 -d redis",
     "dev": "set NODE_ENV=local && npx sequelize db:migrate && nodemon dist/app.js",
-    "start": "npx sequelize db:migrate && nodemon dist/app.js",
+    "start": "npx sequelize db:migrate && docker start redis && nodemon dist/app.js",
     "build": "rm -Rf dist/ && tsc",
     "serve": "rimraf dist && tsc && node ./dist/app.js"
   },
