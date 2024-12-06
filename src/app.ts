@@ -11,6 +11,7 @@ import cookieParser from "cookie-parser";
 import sequelize from "./db/dbConnect";
 import setInterface from "./middlewares/interface";
 import logging from "./middlewares/logging";
+import "./utils/redis/workers/posts.worker"
 
 import authRouter from "./router/auth";
 import fileRouter from './router/upload';

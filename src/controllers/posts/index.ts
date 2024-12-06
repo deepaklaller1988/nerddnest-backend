@@ -7,6 +7,7 @@ import Connections from '../../db/models/connections.model';
 import Users from '../../db/models/users.model';
 import Likes from '../../db/models/likes.model';
 import Comments from '../../db/models/comments.model';
+import { schedulePost } from '../../utils/redis/queues/posts.queue';
 
 
 const createPost = async (req: Request, res: Response) => {
@@ -45,8 +46,17 @@ const createPost = async (req: Request, res: Response) => {
               transaction,
             });
           }
-      
 
+          if (data.is_scheduled) {
+            const result = await schedulePost(post.id, post.user_id, data.schedule_time);
+            if(result.success){
+              await transaction.commit();
+              return res.sendSuccess(res, post);
+            }else{
+              if (transaction) await transaction.rollback();
+              return  res.sendError(res, result?.message);
+            }
+          }
           await transaction.commit();
           return res.sendSuccess(res, post);
     } catch (error: any) {
@@ -103,6 +113,7 @@ const getPosts = async (req: Request, res: Response) => {
                 { user_id: { [Op.in]: friendIds } }, // Friend posts
                 // { privacy: 'public' }, // Public posts
               ],
+              is_published: true
             },
             include: [
               {
