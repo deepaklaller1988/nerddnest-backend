@@ -109,10 +109,26 @@ const getPosts = async (req: Request, res: Response) => {
           const { count, rows } = await Posts.findAndCountAll({
             where: {
               [Op.or]: [
-                { user_id: userId }, // User's own posts
-                { user_id: { [Op.in]: friendIds } }, // Friend posts
-                // { privacy: 'public' }, // Public posts
-              ],
+                { visibility: 'public' }, // Public posts visible to everyone
+                { visibility: 'all-members' }, // All members can see these posts
+                {
+                    [Op.and]: [
+                        { visibility: 'connections' }, // Connections visibility
+                        {
+                          [Op.or]: [
+                            { user_id: userId }, // User's own posts
+                            { user_id: { [Op.in]: friendIds } }, // Friend posts
+                          ],
+                        }
+                    ],
+                },
+                {
+                    [Op.and]: [
+                        { visibility: 'only-me' }, // Only-me visibility
+                        { user_id: userId }, // Only the user's own posts
+                    ],
+                },
+            ],
               is_published: true
             },
             include: [
