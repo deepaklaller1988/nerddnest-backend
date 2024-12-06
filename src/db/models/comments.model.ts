@@ -51,6 +51,10 @@ Comments.belongsTo(Comments, {
   as: "parent_comment",
 });
 
+Comments.hasMany(Comments, {
+  foreignKey: 'parent_id',
+  as: 'replies', // Alias for child comments (optional)
+});
 
 Comments.sync()
 

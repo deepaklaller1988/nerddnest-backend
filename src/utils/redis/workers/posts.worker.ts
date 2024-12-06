@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import RedisConn from '../redis-connection';
 import logger from "../../logger";
 import Posts from "../../../db/models/posts.model";
+import UserCounts from "../../../db/models/user-counts.model";
 
 
 RedisConn.ping((err, res) => {
@@ -35,6 +36,11 @@ const publishPost = async (job: any) =>{
      // Publish the post
      post.is_published = true;
      await post.save();
+
+     await UserCounts.increment("no_of_posts", {
+        by: 1,
+        where: { user_id: userId },
+      });
  
      console.log(`Post ${postId} published successfully!`);
      logger.info(`WEB WORKER | POST ID: ${postId} | USER ID: ${userId} - PUBLISHED SUCCESSFULLY`)
