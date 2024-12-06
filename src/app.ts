@@ -11,7 +11,12 @@ import cookieParser from "cookie-parser";
 import sequelize from "./db/dbConnect";
 import setInterface from "./middlewares/interface";
 import logging from "./middlewares/logging";
+import "./utils/redis/workers/posts.worker"
+
 import authRouter from "./router/auth";
+import fileRouter from './router/upload';
+import postRouter from './router/posts';
+import friendRouter from './router/connections';
 import moment from "moment";
 
 const PORT = process.env.PORT;
@@ -46,6 +51,9 @@ app.use(setInterface);
 app.use(logging);
 
 app.use("/auth", authRouter);
+app.use("/file", fileRouter);
+app.use("/posts", postRouter);
+app.use("/friends", friendRouter);
 
 // app.use((req, res) => {
 //     res.status(404).json({ message: "Route not found" });
