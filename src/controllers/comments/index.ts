@@ -120,7 +120,7 @@ export const deleteComment = async (req: Request, res: Response) =>{
             return  res.sendError(res, 'Comment not found.');
           }
 
-        const post = await Posts.findOne({ where: { id: comment?.dataValues?.id } });
+        const post = await Posts.findOne({ where: { id: comment?.dataValues?.post_id } });
         if (!post) {
             return  res.sendError(res, 'Post not found.');
           }
