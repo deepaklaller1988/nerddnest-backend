@@ -7,7 +7,7 @@ import Connections from '../../db/models/connections.model';
 import Users from '../../db/models/users.model';
 import Likes from '../../db/models/likes.model';
 import Comments from '../../db/models/comments.model';
-import { schedulePost } from '../../utils/redis/queues/posts.queue';
+import { deleteScheduleJob, editScheduledJob, postQueue, schedulePost } from '../../utils/redis/queues/posts.queue';
 
 
 const createPost = async (req: Request, res: Response) => {
@@ -359,4 +359,69 @@ const editPost = async (req: Request, res: Response) => {
 }
 };
 
-export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty}
+const editScheduledPost = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+      const { id, userId, content, mediaUrl, sharedLink, visibility, scheduleTime } = req.body;
+
+      if (!id || !userId) {
+          return res.sendError(res, "ID or User ID is missing.");
+      }
+
+      const post = await Posts.findOne({
+          where: { id, user_id: userId },
+      });
+
+      if (!post) {
+          return res.sendError(res, "Post not found or not owned by the user.");
+      }
+
+      // Check if the post is already published
+      if (post.is_published) {
+          return res.sendError(res, "Cannot edit a published post.");
+      }
+
+      const updateData: any = { content, media_url: mediaUrl,shared_link:sharedLink, visibility };
+
+      if (scheduleTime) {
+        updateData.schedule_time = scheduleTime;
+        updateData.is_scheduled = true;
+        updateData.is_published = false;
+
+        const result = await editScheduledJob(post.id, post.user_id, scheduleTime);
+            if(!result.success){
+              if (transaction) await transaction.rollback();
+              return  res.sendError(res, result?.message);
+            }
+      }else{
+        updateData.is_scheduled = false;
+        updateData.schedule_time = null;
+        updateData.is_published = true;
+
+
+        const result = await deleteScheduleJob(post.id, post.user_id);
+          if(!result.success){
+            if (transaction) await transaction.rollback();
+            return  res.sendError(res, result?.message);
+          }
+
+            // Increment the user's post count
+            await UserCounts.increment("no_of_posts", {
+                by: 1,
+                where: { user_id: userId },
+                transaction,
+            });
+      }
+
+      await post.update(updateData, { transaction });
+      await transaction.commit();
+      return res.sendSuccess(res, post);
+  } catch (error: any) {
+      if (transaction) await transaction.rollback();
+      console.error("Error editing post:", error);
+      return res.sendError(res, error.message);
+  }
+};
+
+
+export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty, editScheduledPost}
