@@ -8,7 +8,7 @@ import Comments from '../../db/models/comments.model';
 
 export const postComment = async (req: Request, res: Response) =>{
     try {
-        const { postId, commenterId, comment  } = req.body;
+        const { postId, commenterId, comment, contentType, mediaUrl  } = req.body;
 
         const post = await Posts.findOne({ where: { id: postId } });
 
@@ -20,6 +20,8 @@ export const postComment = async (req: Request, res: Response) =>{
             commenter_id: commenterId,
             post_id: postId,
             comment,
+            content_type: contentType,
+            media_url: mediaUrl,
           });
 
         post.comments_count += 1;

@@ -32,7 +32,14 @@ const Comments = db.define('comments', {
       type: DataTypes.TEXT
     },
     likes_count: {
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
+    content_type: {
+      type: DataTypes.STRING
+    },
+    media_url: {
+      type: DataTypes.ARRAY(DataTypes.TEXT),
     },
 });
 

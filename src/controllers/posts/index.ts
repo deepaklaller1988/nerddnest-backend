@@ -138,7 +138,7 @@ const getPosts = async (req: Request, res: Response) => {
                 attributes: ['id', 'firstname','lastname','handle', 'image'], // Post creator info
               }
             ],
-            order: [['createdAt', 'DESC']], // Newest posts first
+            order: [['is_pinned', 'DESC'],['createdAt', 'DESC']], // Newest posts first
             offset,
             limit: Number(limit),
           });
@@ -424,4 +424,182 @@ const editScheduledPost = async (req: Request, res: Response) => {
 };
 
 
-export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty, editScheduledPost}
+
+const getUserLikedPosts = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  const { userId }: any = req.query;
+
+  try {
+      if (!userId) {
+          return res.sendError(res, "User Id is Missing");
+      }
+
+      if (searchTerm) {
+          whereCondition[Op.or] = [
+              { '$friend.firstname$': { [Op.iLike]: `%${searchTerm}%` } },
+              { '$user.firstname$': { [Op.iLike]: `%${searchTerm}%` } },
+          ];
+      }
+
+      const {count, rows} = await Likes.findAndCountAll({
+        include: [
+          {
+            model: Posts,
+            as: 'post',
+            include:[
+              {
+                model: Users,
+                as: 'user',
+                attributes: ['id', 'firstname', 'lastname', 'handle', 'image'],
+            },
+            ]
+        },
+        ],
+        where: {user_id: userId},
+        order: [['createdAt', 'DESC']], // Newest posts first
+        offset,
+        limit: Number(limit),
+      });
+
+      let data = rows && rows.length > 0 ? rows.map((item: any) => item?.dataValues?.post) : []
+
+      // const friendIds = await Connections.findAll({
+      //     where: {
+      //         [Op.or]: [
+      //             { user_id: userId },
+      //             { friend_id: userId }
+      //         ],
+      //         request_status: 'Accepted',
+      //     },
+      //     attributes: [
+      //         sequelize.literal(`
+      //             CASE 
+      //             WHEN user_id = ${userId} THEN friend_id
+      //             ELSE user_id
+      //             END AS friendId
+      //         `),
+      //     ],
+      //     raw: true,
+      // }).then((rows: any) => rows.map((row: any) => row.friendId));
+
+      // const { count, rows } = await Posts.findAndCountAll({
+      //     where: {
+      //         [Op.or]: [
+      //             { visibility: 'public' },
+      //             { visibility: 'all-members' },
+      //             {
+      //                 [Op.and]: [
+      //                     { visibility: 'connections' },
+      //                     {
+      //                         [Op.or]: [
+      //                             { user_id: userId },
+      //                             { user_id: { [Op.in]: friendIds } },
+      //                         ],
+      //                     },
+      //                 ],
+      //             },
+      //             {
+      //                 [Op.and]: [
+      //                     { visibility: 'only-me' },
+      //                     { user_id: userId },
+      //                 ],
+      //             },
+      //         ],
+      //         is_published: true,
+      //     },
+      //     include: [
+      //         {
+      //             model: Users,
+      //             as: 'user',
+      //             attributes: ['id', 'firstname', 'lastname', 'handle', 'image'],
+      //         },
+      //     ],
+      //     order: [['is_pinned', 'DESC'], ['createdAt', 'DESC']],
+      //     offset,
+      //     limit,
+      // });
+
+      let posts: any = [];
+
+      for await (let [index, item] of data.entries()) {
+          const likes = await Likes.findAll({
+              where: { post_id: item?.dataValues?.id },
+              attributes: ['id', 'user_id'],
+              include: [
+                  {
+                      model: Users,
+                      as: 'user',
+                      attributes: ['id', 'firstname', 'lastname', 'handle', 'image'],
+                  },
+              ],
+          });
+
+          const comments = await Comments.findAll({
+              where: { post_id: item?.dataValues?.id, parent_id: null },
+              attributes: ['id', 'commenter_id', 'comment', 'createdAt'],
+              include: [
+                {
+                  model: Users,
+                  as: 'commenter',
+                  attributes: ['id', 'firstname','lastname','handle', 'image'], // Post creator info
+                },
+                {
+                  model: Comments,
+                  as: 'replies', // Replies to the parent comment
+                  include: [
+                      {
+                          model: Users,
+                          as: 'commenter',
+                          attributes: ['id', 'firstname', 'lastname', 'handle', 'image'], // Reply commenter info
+                      },
+                  ],
+              },
+              ],
+          });
+
+          posts.push({
+              ...item.dataValues,
+              likes,
+              comments
+          });
+      }
+
+      return res.sendPaginationSuccess(res, posts, count);
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error?.message);
+  }
+};
+
+
+const getUserScheduledPosts = async (req: Request, res: Response) => {
+  const { userId }: any = req.query;
+
+  try {
+      if (!userId) {
+          return res.sendError(res, "User Id is Missing");
+      }
+
+      const posts = await Posts.findAll({
+        where:{user_id: userId, is_published: false, is_scheduled: true},
+        include:[
+          {
+            model: Users,
+            as: 'user',
+            attributes: ['id', 'firstname', 'lastname', 'handle', 'image'],
+        },
+        ]
+      })
+
+      return res.sendSuccess(res, posts);
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error?.message);
+  }
+};
+
+export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty, getUserLikedPosts, editScheduledPost, getUserScheduledPosts}
