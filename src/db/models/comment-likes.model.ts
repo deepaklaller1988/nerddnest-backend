@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../dbConnect';
+import Users from './users.model';
 
 
 const CommentLike = db.define('comment_likes', {
@@ -24,6 +25,12 @@ const CommentLike = db.define('comment_likes', {
       onDelete: 'CASCADE',
     },
 });
+
+CommentLike.belongsTo(Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
+
 
 CommentLike.sync()
 
