@@ -338,14 +338,15 @@ const toggleCommenting = async (req: Request, res: Response) => {
 
 const editPost = async (req: Request, res: Response) => {
   try {
-    const { id, userId, content, mediaUrl, sharedLink, visibility } = req.body;
+    const { id, userId, content, mediaUrl, postType,sharedLink, visibility } = req.body;
 
     const post = await Posts.findOne({ where: { id, user_id: userId } });
 
     if (!post) {
       return  res.sendError(res, 'Post not found for this user.');
     }
-
+    
+    post.post_type= postType || post.post_type;
     post.content = content || post.content;
     post.media_url = mediaUrl || post.media_url;
     post.shared_link = sharedLink || post.shared_link;
@@ -362,7 +363,7 @@ const editPost = async (req: Request, res: Response) => {
 const editScheduledPost = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   try {
-      const { id, userId, content, mediaUrl, sharedLink, visibility, scheduleTime } = req.body;
+      const { id, userId, content, mediaUrl, sharedLink, postType, visibility, scheduleTime } = req.body;
 
       if (!id || !userId) {
           return res.sendError(res, "ID or User ID is missing.");
@@ -381,7 +382,7 @@ const editScheduledPost = async (req: Request, res: Response) => {
           return res.sendError(res, "Cannot edit a published post.");
       }
 
-      const updateData: any = { content, media_url: mediaUrl,shared_link:sharedLink, visibility };
+      const updateData: any = { content, media_url: mediaUrl, post_type: postType, shared_link:sharedLink, visibility };
 
       if (scheduleTime) {
         updateData.schedule_time = scheduleTime;
@@ -466,62 +467,6 @@ const getUserLikedPosts = async (req: Request, res: Response) => {
       });
 
       let data = rows && rows.length > 0 ? rows.map((item: any) => item?.dataValues?.post) : []
-
-      // const friendIds = await Connections.findAll({
-      //     where: {
-      //         [Op.or]: [
-      //             { user_id: userId },
-      //             { friend_id: userId }
-      //         ],
-      //         request_status: 'Accepted',
-      //     },
-      //     attributes: [
-      //         sequelize.literal(`
-      //             CASE 
-      //             WHEN user_id = ${userId} THEN friend_id
-      //             ELSE user_id
-      //             END AS friendId
-      //         `),
-      //     ],
-      //     raw: true,
-      // }).then((rows: any) => rows.map((row: any) => row.friendId));
-
-      // const { count, rows } = await Posts.findAndCountAll({
-      //     where: {
-      //         [Op.or]: [
-      //             { visibility: 'public' },
-      //             { visibility: 'all-members' },
-      //             {
-      //                 [Op.and]: [
-      //                     { visibility: 'connections' },
-      //                     {
-      //                         [Op.or]: [
-      //                             { user_id: userId },
-      //                             { user_id: { [Op.in]: friendIds } },
-      //                         ],
-      //                     },
-      //                 ],
-      //             },
-      //             {
-      //                 [Op.and]: [
-      //                     { visibility: 'only-me' },
-      //                     { user_id: userId },
-      //                 ],
-      //             },
-      //         ],
-      //         is_published: true,
-      //     },
-      //     include: [
-      //         {
-      //             model: Users,
-      //             as: 'user',
-      //             attributes: ['id', 'firstname', 'lastname', 'handle', 'image'],
-      //         },
-      //     ],
-      //     order: [['is_pinned', 'DESC'], ['createdAt', 'DESC']],
-      //     offset,
-      //     limit,
-      // });
 
       let posts: any = [];
 
