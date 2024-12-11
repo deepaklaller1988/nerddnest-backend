@@ -275,6 +275,49 @@ const deletePost = async (req: Request, res: Response) =>{
     }
 }
 
+const deleteSchedulePost = async (req: Request, res: Response) =>{
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id, userId } = req.body;
+    if (!id || !userId) {
+      return res.sendError(res, 'Id or user id is missing');
+  }
+
+      const post = await Posts.findOne({ where: { id: req.body.id, user_id: userId } });
+
+      if (!post) {
+        return  res.sendError(res, 'Post not found for this user.');
+      }
+
+            // Check if the post is already published
+      if (post.is_published) {
+        return res.sendError(res, "Cannot delete already published scheduled post.");
+      }
+
+      const result = await deleteScheduleJob(post.id, post.user_id);
+          if(!result.success){
+            if (transaction) await transaction.rollback();
+            return  res.sendError(res, result?.message);
+          }
+
+
+      const del = await Posts.destroy({
+          where: {
+              id: req.body.id
+          },
+          transaction,
+      });
+
+      await transaction.commit();
+      return res.sendSuccess(res, del);
+  } catch (error: any) {
+      if (transaction) await transaction.rollback();
+      console.log("Error deleting post:", error);
+      return res.sendError(res, error.message);
+  }
+}
+
 const pinPost = async (req: Request, res: Response) => {
   try {
     const { id, userId, pinned } = req.body;
@@ -547,4 +590,4 @@ const getUserScheduledPosts = async (req: Request, res: Response) => {
   }
 };
 
-export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty, getUserLikedPosts, editScheduledPost, getUserScheduledPosts}
+export { createPost, getPosts, getPost, deletePost, pinPost, toggleCommenting, editPost, changeVisibilty, getUserLikedPosts, editScheduledPost, getUserScheduledPosts, deleteSchedulePost}

@@ -1,6 +1,6 @@
 import { deleteComment, getComments, postComment, postReplyComment } from "../../controllers/comments";
 import { getCommentLikes, getLikes, likeComment, likePost } from "../../controllers/likes";
-import { changeVisibilty, createPost, deletePost, editPost, editScheduledPost, getPost, getPosts, getUserLikedPosts, getUserScheduledPosts, pinPost, toggleCommenting } from "../../controllers/posts";
+import { changeVisibilty, createPost, deletePost, deleteSchedulePost, editPost, editScheduledPost, getPost, getPosts, getUserLikedPosts, getUserScheduledPosts, pinPost, toggleCommenting } from "../../controllers/posts";
 import { Router } from "express";
 
 const router = Router();
@@ -20,6 +20,7 @@ router.put('/turn-off-comments', toggleCommenting);
 router.put('/pin-post', pinPost);
 router.put('/update', editPost);
 router.put('/update-scheduled-post', editScheduledPost);
+router.delete('/delete-scheduled-post', deleteSchedulePost);
 
 router.post('/like', likePost);
 router.get('/get-likes', getLikes);
