@@ -441,4 +441,81 @@ const getSearchedFriends = async (req: Request, res: Response) => {
 }
 
 
-export { createConnections, getFriendsList, acceptRequest, getPendingRequests, deleteFriend, getFriendSuggestions, getSearchedFriends }
+const getFriendProfile = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.userId) {
+            return res.sendError(res, "User Id is Missing");
+        }
+
+        if (!req.query.friendId) {
+            return res.sendError(res, "Friend Id is Missing");
+        }
+
+        const requestStatus = await Connections.findOne({
+            attributes:['request_status'],
+            where: {friend_id: req.query.friendId, user_id: req.query.userId}, 
+        });
+
+
+        const user = await Users.findOne({
+            where: {
+                id: req.query.friendId,
+                is_acc_activated: true
+            }
+        });
+
+        if(!user){
+            return res.sendError(res, "User not found");
+        }
+
+        let data ={
+            ...user.dataValues,
+            request_status: requestStatus ? requestStatus.request_status : null
+        }
+            return res.sendSuccess(res, data);
+    } catch (error: any) {
+        console.log(error)
+        return  res.sendError(res, error?.message);
+    }
+}
+
+const cancelFriendRequest = async (req: Request, res: Response) => {
+    try {
+        if (!req.body.userId) {
+            return res.sendError(res, "User Id is Missing");
+        }
+
+        if (!req.body.friendId) {
+            return res.sendError(res, "Friend Id is Missing");
+        }
+
+        const requestStatus = await Connections.findOne({
+            attributes:['request_status'],
+            where: {friend_id: req.body.friendId, user_id: req.body.userId}, 
+        });
+
+        if(!requestStatus){
+            return res.sendError(res, "Friend Request is Missing");  
+        }
+
+        if(requestStatus.request_status === 'Accepted' || requestStatus.request_status === 'Rejected'){
+            return res.sendError(res, "Friend Request is already Accepted or Rejected"); 
+        }
+
+        const del = await Connections.destroy({
+            where:{
+                friend_id: req.body.friendId, 
+                user_id: req.body.userId,
+                request_status: 'Pending'
+            }
+        })
+        return res.sendSuccess(res, del);
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+
+
+export { createConnections, getFriendsList, acceptRequest, getPendingRequests, deleteFriend, getFriendSuggestions, getSearchedFriends, getFriendProfile, cancelFriendRequest }
