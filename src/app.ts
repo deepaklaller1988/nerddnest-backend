@@ -17,6 +17,7 @@ import authRouter from "./router/auth";
 import fileRouter from './router/upload';
 import postRouter from './router/posts';
 import friendRouter from './router/connections';
+import storyRouter from './router/stories';
 import moment from "moment";
 
 const PORT = process.env.PORT;
@@ -54,6 +55,7 @@ app.use("/auth", authRouter);
 app.use("/file", fileRouter);
 app.use("/posts", postRouter);
 app.use("/friends", friendRouter);
+app.use("/story", storyRouter);
 
 // app.use((req, res) => {
 //     res.status(404).json({ message: "Route not found" });
