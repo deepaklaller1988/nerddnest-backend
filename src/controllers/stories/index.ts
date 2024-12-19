@@ -166,7 +166,7 @@ const getCovers = async (req: Request, res: Response) => {
 }
 
 const deleteCovers = async (req: Request, res: Response) => {
-    const { id,userId }: any = req.query;
+    const { id,userId }: any = req.body;
     try {
 
         if (!userId) {
