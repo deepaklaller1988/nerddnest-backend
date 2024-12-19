@@ -138,4 +138,60 @@ const getStories = async (req: Request, res: Response) => {
         }
 }
 
-export {createStory, getStories}
+const getCovers = async (req: Request, res: Response) => {
+    const { userId }: any = req.query;
+    try {
+
+        if (!userId) {
+            return res.sendError(res, "User Id is Missing");
+        }
+
+        const currentTime = new Date(); // Get the current time
+
+        const results = await StoryCover.findAll({
+            where: {
+                user_id: userId,
+                expiresAt: {
+                    [Op.gt]: currentTime, // Check if expiresAt is greater than the current time
+                },
+            },
+            order: [['id','ASC']]
+        });
+
+        return res.sendSuccess(res, results);
+    } catch (error: any) {
+        console.log(error)
+        return  res.sendError(res, error?.message);
+    }  
+}
+
+const deleteCovers = async (req: Request, res: Response) => {
+    const { id,userId }: any = req.query;
+    try {
+
+        if (!userId) {
+            return res.sendError(res, "User Id is Missing");
+        }
+
+        const results = await StoryCover.destroy({
+            where: {
+                user_id: userId,
+                id: id
+            }
+        });
+
+        await Story.destroy({
+            where: {
+                user_id: userId,
+                story_cover_id: id
+            }
+        });
+        
+        return res.sendSuccess(res, results);
+    } catch (error: any) {
+        console.log(error)
+        return  res.sendError(res, error?.message);
+    }  
+}
+
+export {createStory, getStories, getCovers, deleteCovers}
