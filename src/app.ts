@@ -37,7 +37,7 @@ const connectToDb = async () => {
     }
   };
 
-app.use(express.json());
+app.use(express.json({ limit: '2450mb' }));
 app.use(express.urlencoded({ extended: true }));
 var corsOptions = {
     origin: function (origin: any, callback: any) {
