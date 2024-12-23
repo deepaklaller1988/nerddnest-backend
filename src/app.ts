@@ -7,11 +7,14 @@ console.log(process.env.NODE_ENV);
 import express from 'express';
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import http from 'http';
+import { Server } from 'socket.io';
 
 import sequelize from "./db/dbConnect";
 import setInterface from "./middlewares/interface";
 import logging from "./middlewares/logging";
-import "./utils/redis/workers/posts.worker"
+import "./utils/redis/workers/posts.worker";
+import { initSocket } from "./utils/socket/connection";
 
 import authRouter from "./router/auth";
 import fileRouter from './router/upload';
@@ -39,6 +42,11 @@ const connectToDb = async () => {
 
 app.use(express.json({ limit: '2450mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+//socket io Initialization
+const server = http.createServer(app);
+initSocket(server);
+
 var corsOptions = {
     origin: function (origin: any, callback: any) {
         callback(null, true);
