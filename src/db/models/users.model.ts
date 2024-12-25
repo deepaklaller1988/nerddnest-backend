@@ -59,6 +59,10 @@ const Users = db.define('users', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  online_status: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    }
 });
 
 Users.sync()

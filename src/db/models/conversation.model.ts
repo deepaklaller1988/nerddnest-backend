@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../dbConnect';
+import Users from './users.model';
 
 
 const Conversation = db.define('conversations', {
@@ -16,6 +17,18 @@ const Conversation = db.define('conversations', {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    created_by: {
+      type: DataTypes.INTEGER,
+      foreignKey: true,
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'CASCADE',
+    },
+});
+
+Conversation.belongsTo(Users, {
+  foreignKey: "created_by",
+  as: "creator",
 });
 
 export default Conversation;

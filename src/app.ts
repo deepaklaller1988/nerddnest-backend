@@ -21,6 +21,7 @@ import fileRouter from './router/upload';
 import postRouter from './router/posts';
 import friendRouter from './router/connections';
 import storyRouter from './router/stories';
+import MessageRouter from './router/messages';
 import userRouter from './router/users';
 import moment from "moment";
 
@@ -66,12 +67,18 @@ app.use("/posts", postRouter);
 app.use("/friends", friendRouter);
 app.use("/story", storyRouter);
 app.use("/users", userRouter);
+app.use("/messages", MessageRouter);
 
 // app.use((req, res) => {
 //     res.status(404).json({ message: "Route not found" });
 // });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     connectToDb();
     console.log(`Server started on port ${PORT}`);
 })
+
+// // Start Socket.IO server
+// server.listen(5001, () => {
+//   console.log(`Socket.IO server started on port 5001`);
+// });
