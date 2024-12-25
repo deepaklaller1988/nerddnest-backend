@@ -33,6 +33,11 @@ const startConversation = async (data: any) => {
 
             const conversation = await Conversation.create(conversationData, { transaction });
 
+            await ConversationParticipants.create( {
+                user_id: Number(senderId),
+                conversation_id: conversation.id,
+            } , { transaction });
+
             for await(let partId of participantIds){
                 let conversationPartners = {
                     user_id: Number(partId),
@@ -98,7 +103,7 @@ const getMessages = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { content: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$user.firstname$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sender.firstname$': { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
 
@@ -149,4 +154,97 @@ const getMessages = async (req: Request, res: Response) => {
     }
 }
 
-export {startConversation, sendMessages, getMessages}
+const getConversations = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const { pagination, userId }: any = req.query;
+    const whereCondition: any = [];
+
+    try {
+        if (searchTerm) {
+            whereCondition.push(`
+              (
+                c.name ILIKE '%${searchTerm}%'
+              )
+            `);
+        }
+
+        if (!userId) {
+            return res.sendError(res, "Conversation Id is Missing");
+        }
+
+
+        whereCondition.push(`cp.user_id = ${userId}`)
+
+
+        // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+
+        const countQuery = `
+            WITH latest_conversations AS (
+                SELECT 
+                    c.*, 
+                    cp.user_id, 
+                    latest_messages.latest_message_time
+                FROM conversations c
+                JOIN (
+                    SELECT m.conversation_id, MAX(m."createdAt") AS latest_message_time
+                    FROM messages m
+                    GROUP BY m.conversation_id
+                ) latest_messages ON c.id = latest_messages.conversation_id
+                JOIN conversation_participants cp ON cp.conversation_id = c.id
+                ${whereClause}
+            )
+            SELECT COUNT(*) AS total_count 
+            FROM latest_conversations
+            `;
+        
+            const dataQuery =
+            `
+                WITH latest_conversations AS (
+                    SELECT 
+                        c.*, 
+                        cp.user_id, 
+                        latest_messages.latest_message_time
+                    FROM conversations c
+                    JOIN (
+                        SELECT m.conversation_id, MAX(m."createdAt") AS latest_message_time
+                        FROM messages m
+                        GROUP BY m.conversation_id
+                    ) latest_messages ON c.id = latest_messages.conversation_id
+                    JOIN conversation_participants cp ON cp.conversation_id = c.id
+                    ${whereClause}
+                )
+                SELECT * 
+                FROM latest_conversations
+                ORDER BY latest_message_time DESC
+            `;
+
+
+            const [countResult, rows] = await Promise.all([
+                sequelize.query(countQuery, {
+                    type: sequelize.QueryTypes.SELECT,
+                }),
+                sequelize.query(dataQuery, {
+                    replacements: { limit, offset },
+                    type: sequelize.QueryTypes.SELECT,
+                })
+            ]);
+    
+            const totalCount = countResult && countResult.length > 0 ? Number(countResult[0].total_count) : 0;
+    
+            // let result = data.slice(offset, offset + limit);
+    
+            // return res.sendPaginationSuccess(res, result, data.length);
+            return res.sendPaginationSuccess(res, rows, totalCount);
+            
+    } catch (error: any) {
+        console.log(error)
+        return  res.sendError(res, error?.message);
+    }
+}
+
+export {startConversation, sendMessages, getMessages, getConversations}
