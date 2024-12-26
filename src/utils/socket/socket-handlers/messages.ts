@@ -1,9 +1,40 @@
 import { sendMessages, startConversation } from '../../../controllers/messages';
+import { io } from '../connection';
 import Users from '../../../db/models/users.model';
 import RedisConn from '../../redis/redis-connection';
 import logger from '../../logger';
+import ConversationParticipants from '../../../db/models/conversation-participants.model';
+import { Op } from 'sequelize';
 
 const onlineUsersKey = "online_users";
+const onlineSoketsKey = "online_sockets";
+
+const findSocketIdByUserId = async (userId: any) => {
+  // Find the socket.id for the given userId
+  const socketId =  await RedisConn.hget(onlineSoketsKey, userId);
+
+  if (!socketId) {
+    logger.info(`No socket ID found for user ${userId}`);
+    return null;
+  }
+
+
+  // Ensure 'io' is defined
+  if (!io) {
+    logger.error("Socket.IO server is not initialized");
+    return null;
+  }
+
+  // Retrieve the socket instance
+  const socketInstance = io.sockets.sockets.get(socketId);
+    if (!socketInstance) {
+        logger.info(`Socket instance not found for ID: ${socketId}`);
+        return null;
+    }
+
+    return socketInstance;
+};
+
 
 const messageHandler = async (socket: any,io: any) =>{
 
@@ -27,6 +58,7 @@ const messageHandler = async (socket: any,io: any) =>{
           await user.save();
 
         const users = await RedisConn.hset(onlineUsersKey, socket.id, userId);
+        const sockets = await RedisConn.hset(onlineSoketsKey, userId, socket.id);
         socket.emit("userStatusUpdate", { userId, status: "online" });
 
         callback({ success: true, data: user });
@@ -52,6 +84,7 @@ const messageHandler = async (socket: any,io: any) =>{
           await user.save();
 
         await RedisConn.hdel(onlineUsersKey, socket.id);
+        await RedisConn.hdel(onlineSoketsKey, userId);
         console.log(`User ${userId} is offline.`);
         socket.broadcast.emit("userStatusUpdate", { userId, status: "offline" });
 
@@ -72,7 +105,26 @@ const messageHandler = async (socket: any,io: any) =>{
                     return callback({ success: false, error: result.error });
                   }
             }
-            socket.broadcast.emit("msg-receive", { senderId, conversationId: result.data ? result.data.conversation_id : null });
+
+            const conversationId = result.data.conversation_id;
+            socket.join(conversationId.toString())
+
+            // Add participants to the room
+            const addParticipantsToRoom = async () => {
+              for (const participantId of participantIds) {
+                const participantSocket: any = await findSocketIdByUserId(participantId); // Custom function to map userId to socket
+                if (participantSocket) {
+                  participantSocket.join(conversationId.toString());
+                  logger.info(`User ${participantId} joined room ${conversationId}`);
+                } else {
+                  logger.info(`User ${participantId} is not online`);
+                }
+              }
+            };
+
+            await addParticipantsToRoom();
+
+            io.to(conversationId.toString()).emit("msg-receive", { senderId, conversationId: result.data ? result.data.conversation_id : null, data: result.data });
             callback({ success: true, data: result.data });
         } catch (error: any) {
             console.log(error.message)
@@ -100,7 +152,34 @@ const messageHandler = async (socket: any,io: any) =>{
                     return callback({ success: false, error: result.error });
                   }
             }
-            socket.broadcast.emit("msg-receive", { senderId, conversationId });
+
+            const participant = await ConversationParticipants.findAll({
+              where: {
+                  conversation_id: conversationId,
+                  user_id: { [Op.not]: senderId}
+              },
+          })
+
+          const participantIds = participant && participant.length > 0 ? participant?.map((item: any) => item.user_id) : []; 
+
+            socket.join(conversationId.toString())
+
+            // Add participants to the room
+            const addParticipantsToRoom = async () => {
+              for (const participantId of participantIds) {
+                const participantSocket: any = await findSocketIdByUserId(participantId); // Custom function to map userId to socket
+                if (participantSocket) {
+                  participantSocket.join(conversationId.toString());
+                  logger.info(`User ${participantId} joined room ${conversationId}`);
+                } else {
+                  logger.info(`User ${participantId} is not online`);
+                }
+              }
+            };
+
+            await addParticipantsToRoom();
+
+            io.to(conversationId.toString()).emit("msg-receive", result.data );
             callback({ success: true, data: result.data });
         } catch (error: any) {
             console.log(error.message)

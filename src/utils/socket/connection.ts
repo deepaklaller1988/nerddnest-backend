@@ -4,7 +4,7 @@ import { messageHandler } from './socket-handlers/messages';
 import RedisConn from '../redis/redis-connection';
 import Users from '../../db/models/users.model';
 
-let io;
+let io: Server | undefined;
 
 const onlineUsersKey = "online_users";
 
@@ -50,6 +50,15 @@ const initializeIO = async (io: any) =>{
             await RedisConn.hdel(onlineUsersKey, socket.id);
             socket.broadcast.emit("userStatusUpdate", { userId: OnlineUser, status: "offline" });
           }
+
+          console.log(socket.rooms)
+              // Leave all rooms, excluding the socket's own ID
+            for (let room of socket.rooms) {
+              if (room !== socket.id) { // Exclude the socket's own ID
+                socket.leave(room);
+                console.log(`Socket ${socket.id} left room ${room}`);
+              }
+            }
           logger.error(`SOCKET IO | Client Disconnected - ${socket.id}: ${reason}`)
         });
       
