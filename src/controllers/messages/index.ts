@@ -233,13 +233,38 @@ const getConversations = async (req: Request, res: Response) => {
                     type: sequelize.QueryTypes.SELECT,
                 })
             ]);
+
+            let data = [];
+
+            for await (let row of rows){
+                const participant = await ConversationParticipants.findAll({
+                    where: {
+                        conversation_id: row.id,
+                        user_id: { [Op.not]: userId}
+                    },
+                    include: [
+                        {
+                        model: Users,
+                        as: 'user',
+                        attributes: ['id', 'firstname','lastname','handle', 'image'], // Post creator info
+                        }
+                    ],
+                })
+                
+                let conversationName = participant && participant.length > 0 ? participant.map((item: any) => item?.user?.firstname).join(", ") : row.name;
+
+                data.push({
+                    ...row,
+                    conversation_name: conversationName
+                })
+            }
     
             const totalCount = countResult && countResult.length > 0 ? Number(countResult[0].total_count) : 0;
     
             // let result = data.slice(offset, offset + limit);
     
             // return res.sendPaginationSuccess(res, result, data.length);
-            return res.sendPaginationSuccess(res, rows, totalCount);
+            return res.sendPaginationSuccess(res, data, totalCount);
             
     } catch (error: any) {
         console.log(error)
