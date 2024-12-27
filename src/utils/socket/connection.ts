@@ -64,7 +64,7 @@ const initializeIO = async (io: any) =>{
         const userId = socket.user.id;
 
         const sock = await SocketUser.create({
-          user_id: 1,
+          user_id: userId,
           socket_id: socket.id
         })
 
@@ -91,15 +91,15 @@ const initializeIO = async (io: any) =>{
           })
 
           if(userSockets && userSockets.length > 1){
-            await SocketUser.destory({
+            await SocketUser.destroy({
               where:{
-                socket_id: socket.user.id
+                socket_id: socket.id
               }
             })
           }else{
-            await SocketUser.destory({
+            await SocketUser.destroy({
               where:{
-                socket_id: socket.user.id
+                socket_id: socket.id
               }
             });
 
