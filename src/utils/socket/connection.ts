@@ -3,6 +3,8 @@ import logger from '../logger';
 import { messageHandler } from './socket-handlers/messages';
 import RedisConn from '../redis/redis-connection';
 import Users from '../../db/models/users.model';
+import { verifyToken } from "../handleToken";
+import SocketUser from '../../db/models/socketuser.model';
 
 let io: Server | undefined;
 
@@ -26,18 +28,84 @@ const initSocket = (server: any) => {
   };
 
 const initializeIO = async (io: any) =>{
+
+    io.use(async (socket: any, next: any) => {
+      try {
+        const token = socket.handshake.headers.authorization;
+        console.log(token)
+        if (!token) {
+          throw new Error("Authentication token is required");
+        }
+
+        const { data, error }: any = await verifyToken(token, "access");
+        if (error) {
+          switch (error.name) {
+            case "JsonWebTokenError":
+              throw new Error("ERR_INVALID_ACCESS_TOKEN");
+            case "TokenExpiredError":
+              throw new Error("ERR_ACCESS_TOKEN_EXPIRED");
+            default:
+              throw new Error("ERR_INVALID_ACCESS_TOKEN");
+          }
+        }
+    
+        socket.user = data;
+        next();
+      } catch (error) {
+        // Pass an error message to the client
+        next(new Error("Invalid or missing authentication token"));
+      }
+    });
+
     // Use the Socket.IO instance
     io.on("connection", async (socket: any) => {
         logger.info(`SOCKET IO | New Client Connected - ${socket.id}`)
 
+        const userId = socket.user.id;
+
+        const sock = await SocketUser.create({
+          user_id: 1,
+          socket_id: socket.id
+        })
+
+        const user = await Users.findOne({
+          where:{
+              id: userId
+          }
+        });
+
+        if (!user) {
+         throw new Error("User not exist");
+        }
+
+        user.online_status = true;
+        await user.save();
+
         messageHandler(socket,io);
 
         socket.on("disconnect", async (reason: any, callback: any) => {
-          const OnlineUser = await RedisConn.hget(onlineUsersKey, socket.id);
-          if(OnlineUser){
+          const userSockets = await SocketUser.findAll({
+            where: {
+              user_id: socket.user.id
+            }
+          })
+
+          if(userSockets && userSockets.length > 1){
+            await SocketUser.destory({
+              where:{
+                socket_id: socket.user.id
+              }
+            })
+          }else{
+            await SocketUser.destory({
+              where:{
+                socket_id: socket.user.id
+              }
+            });
+
             const user = await Users.findOne({
               where:{
-                  id: Number(OnlineUser)
+                  id: Number(socket.user.id)
               }
           });
   
@@ -47,12 +115,10 @@ const initializeIO = async (io: any) =>{
   
             user.online_status = false;
             await user.save();
-            await RedisConn.hdel(onlineUsersKey, socket.id);
-            socket.broadcast.emit("userStatusUpdate", { userId: OnlineUser, status: "offline" });
+            await RedisConn.hdel(onlineUsersKey, socket.id);  
+            socket.broadcast.emit("userStatusUpdate", { userId: user.id, status: "offline" });
           }
-
-          console.log(socket.rooms)
-              // Leave all rooms, excluding the socket's own ID
+          
             for (let room of socket.rooms) {
               if (room !== socket.id) { // Exclude the socket's own ID
                 socket.leave(room);
