@@ -85,7 +85,7 @@ const messageHandler = async (socket: any,io: any) =>{
       });
 
       socket.on("startConversation", async (data: any, callback: any) => {
-        const { participantIds, senderId, content, mediaType,mediaUrl } = data;
+        let { participantIds, senderId, content, mediaType,mediaUrl } = data;
         try {
             if(!senderId){
                 return callback({ success: false, error: "Sender ID is required" });
@@ -100,7 +100,9 @@ const messageHandler = async (socket: any,io: any) =>{
             }
 
             const conversationId = result.data.conversation_id;
-            socket.join(conversationId.toString())
+            // socket.join(conversationId.toString())
+
+            participantIds = [...participantIds, senderId]
 
             // Add participants to the room
             const addParticipantsToRoom = async () => {
@@ -108,10 +110,11 @@ const messageHandler = async (socket: any,io: any) =>{
                 const allSockets = await SocketUser.findAll({
                   where:{
                     user_id: participantId
-                  }
+                  },
+                  raw: true
                 });
                 for await (let userSocket of allSockets){
-                  const participantSocket: any = await findSocketIdByUserId(userSocket); // Custom function to map userId to socket
+                  const participantSocket: any = await findSocketIdByUserId(userSocket.socket_id); // Custom function to map userId to socket
                   if (participantSocket) {
                     participantSocket.join(conversationId.toString());
                     logger.info(`User ${participantId} joined room ${conversationId}`);
@@ -160,9 +163,11 @@ const messageHandler = async (socket: any,io: any) =>{
               },
           })
 
-          const participantIds = participant && participant.length > 0 ? participant?.map((item: any) => item.user_id) : []; 
+          let participantIds = participant && participant.length > 0 ? participant?.map((item: any) => item.user_id) : []; 
 
-            socket.join(conversationId.toString())
+            // socket.join(conversationId.toString())
+
+            participantIds = [...participantIds, senderId]
 
             // Add participants to the room
             const addParticipantsToRoom = async () => {
@@ -170,10 +175,11 @@ const messageHandler = async (socket: any,io: any) =>{
                 const allSockets = await SocketUser.findAll({
                   where:{
                     user_id: participantId
-                  }
+                  },
+                  raw: true
                 });
                 for await (let userSocket of allSockets){
-                  const participantSocket: any = await findSocketIdByUserId(userSocket); // Custom function to map userId to socket
+                  const participantSocket: any = await findSocketIdByUserId(userSocket.socket_id); // Custom function to map userId to socket
                   if (participantSocket) {
                     participantSocket.join(conversationId.toString());
                     logger.info(`User ${participantId} joined room ${conversationId}`);
